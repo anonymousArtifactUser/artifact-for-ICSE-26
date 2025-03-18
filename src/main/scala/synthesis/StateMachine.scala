@@ -3,6 +3,8 @@ package synthesis
 import com.microsoft.z3._
 import verification.TransitionSystem
 import BoundedModelChecking.BoundedModelChecking
+import util.Misc.parseProgram
+import verification.Verifier._
 
 class StateMachine(name: String, ctx: Context) {
   val states: scala.collection.mutable.Map[String, (Expr[_], Expr[_])] = scala.collection.mutable.Map()
@@ -307,14 +309,23 @@ class StateMachine(name: String, ctx: Context) {
 
 
   def readFromProgram(p: Program): List[List[List[Expr[BoolSort]]]] = {
-    val materializedRelations: Set[Relation] = Set()
-    val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
-      monitorViolations = false, arithmeticOptimization = true)
-    val imperative = impTranslator.translate()
-    // println(imperative)
-    val verifier = new Verifier(dl, imperative)
-    verifier.check()
-    val statemachine: StateMachine = StateMachine()
+    val program = addBuiltInRules(p)
+    val violationRules: Set[Rule] = program.rules.filter(r => program.violations.contains(r.head.relation))
+    tr = TransitionSystem(program.name, ctx)
+
+    val (transactionThis, transactionNext) = tr.newVar("transaction", ctx.mkStringSort())
+
+    var initConditions: List[BoolExpr] = List()
+    for (rel <- materializedRelations) {
+      val sort = getSort(ctx, rel, getIndices(rel))
+      val (v_in, _) = tr.newVar(rel.name, sort)
+      val (_init, _,_) = getInitConstraints(ctx, rel, v_in, indices, initializationRules.find(_.head.relation==rel))
+      initConditions :+= _init
+    }
+    tr.setInit(ctx.mkAnd(initConditions.toArray:_*))
+
+    val (fullTransitionCondition, transactionConditions) = getTransitionConstraints(transactionThis, transactionNext)
+    tr.setTr(fullTransitionCondition, transactionConditions)
   }
   
 

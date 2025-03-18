@@ -4,11 +4,12 @@ import datalog.Program
 import verification.{TransitionSystem, Verifier}
 import synthesis.StateMachine
 import synthesis.Parser
+import util.Misc.parseProgram
 
 case class Synthesizer() {
 
   def synthesize(name: String) = {
-    val temporalProperties: TemporalProperty = TemporalProperty()
+    // val temporalProperties: TemporalProperty = TemporalProperty()
     val datalogpath = "./synthesis-benchmark/" + name + "/" + name + ".dl"
     val propertypath = "./synthesis-benchmark/" + name + "/temporal_properties.txt"
     val tracepath = "./synthesis-benchmark/" + name + "/example_traces.txt"
