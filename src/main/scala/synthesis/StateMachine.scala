@@ -392,7 +392,7 @@ class StateMachine(name: String, ctx: Context) {
         s"""
         |    function $trName() public {
         |        $guardCode
-        |        currentState = ${trName}; // 状态转换
+        |        currentState = ${trName};
         |    }
         |
         """.stripMargin
