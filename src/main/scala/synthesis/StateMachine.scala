@@ -5,6 +5,8 @@ import verification.TransitionSystem
 import BoundedModelChecking.BoundedModelChecking
 import util.Misc.parseProgram
 import verification.Verifier._
+import java.io._
+
 
 class StateMachine(name: String, ctx: Context) {
   val states: scala.collection.mutable.Map[String, (Expr[_], Expr[_])] = scala.collection.mutable.Map()
@@ -278,13 +280,19 @@ class StateMachine(name: String, ctx: Context) {
     positive_traces.foreach { trace =>
       pos :+= simulate(trace, candidate_guard)
     }
-
+    var syn_time = 0.0
+    var bmc_time = 0.0
     var iter = 0
     while (true) {
       iter += 1
+      val startTime = System.nanoTime()
+    
       synthesize(pos, neg, candidate_guard)
-
+      val endTime = System.nanoTime()
+      val elapsedTimeMs = (endTime - startTime) / 1e9
+      syn_time = syn_time + elapsedTimeMs
       var new_ntraces = List[List[List[Expr[BoolSort]]]]()
+      val startTime2 = System.nanoTime()
       properties.foreach { p =>
         val ntrace = bmc(ctx.mkNot(p))
         if (ntrace.isEmpty) {
@@ -294,7 +302,9 @@ class StateMachine(name: String, ctx: Context) {
           println("×") // Property not verified
         }
       }
-
+      val endTime2 = System.nanoTime()
+      val elapsedTimeMs2 = (endTime2 - startTime) / 1e9
+      bmc_time = bmc_time + elapsedTimeMs2
       if (new_ntraces.isEmpty) {
         println("All properties verified!")
         break
@@ -305,6 +315,8 @@ class StateMachine(name: String, ctx: Context) {
         neg :+= simulate(negtrace, candidate_guard)
       }
     }
+
+    println(s" $syn_time $bmc_time")
   }
 
 
@@ -327,6 +339,78 @@ class StateMachine(name: String, ctx: Context) {
     val (fullTransitionCondition, transactionConditions) = getTransitionConstraints(transactionThis, transactionNext)
     tr.setTr(fullTransitionCondition, transactionConditions)
   }
-  
+
+  def getSolidityType(sort: Sort): String = sort match {
+    case _: BitVecSort => "uint256"
+    case _: IntSort    => "int256"
+    case _: StringSort => "string"
+    case _: ArraySort  => "mapping(uint256 => uint256)"
+    case _            => "bytes"
+  }
+
+  def writeFile(path: String): Unit = {
+    val solidityCode = new StringBuilder
+
+    solidityCode.append(
+      s"""
+      |// SPDX-License-Identifier: MIT
+      |pragma solidity ^0.8.0;
+      |
+      |contract ${name.capitalize} {
+      |
+      """.stripMargin
+    )
+
+    states.foreach { case (stateName, (stateExpr, _)) =>
+      val solidityType = getSolidityType(stateExpr.getSort)
+      solidityCode.append(s"    $solidityType public $stateName;\n")
+    }
+
+    val initialState = nowState.getOrElse(states.keys.head)
+    val initialSort = states.get(initialState).map(_._1.getSort).getOrElse(new BitVecSort(256))
+    val currentStateType = getSolidityType(initialSort)
+
+    solidityCode.append(s"\n    $currentStateType public currentState;\n\n")
+
+    solidityCode.append(
+      s"""
+      |    constructor() {
+      |        currentState = $initialState;
+      |    }
+      |
+      """.stripMargin
+    )
+
+    transitions.foreach { trName =>
+      val guardCondition = conditionGuards.getOrElse(trName, null)
+      val guardCode = if (guardCondition != null) {
+        s"        require(${guardCondition.toString}, \"Transition not allowed\");\n"
+      } else {
+        ""
+
+      solidityCode.append(
+        s"""
+        |    function $trName() public {
+        |        $guardCode
+        |        currentState = ${trName}; // 状态转换
+        |    }
+        |
+        """.stripMargin
+      )
+    }
+
+    solidityCode.append("}")
+
+    try {
+      val file = new File(path)
+      val bw = new BufferedWriter(new FileWriter(file))
+      bw.write(solidityCode.toString)
+      bw.close()
+    } catch {
+      case e: IOException => println(s"Error writing Solidity file: ${e.getMessage}")
+    }
+  }
+
+
 
 }
