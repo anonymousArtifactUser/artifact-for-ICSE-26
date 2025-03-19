@@ -1,4 +1,8 @@
-contract Wallet {
+contract VestingWallet {
+    uint256 private _released;
+    address private immutable _beneficiary;
+    uint64 private immutable _start;
+    uint64 private immutable _duration;
     address private _owner;
     mapping(address => int) private _balanceOf;
     int private _totalSupply;
@@ -32,5 +36,10 @@ contract Wallet {
     function balanceOf(address account) public view returns(int) {
         assert(_balanceOf[account]>=0);
         return _balanceOf[account];
+    }
+    function release() public virtual {
+        uint256 releasable = vestedAmount(uint64(block.timestamp)) - released();
+        _released += releasable;
+        payable(beneficiary()).send(releasable);
     }
 }

@@ -1,4 +1,7 @@
-contract ERC20 {
+contract ZilliqaToken{
+    string public constant name = "Zilliqa";
+    string public constant symbol = "ZIL";
+    uint8 public constant decimals = 12;
     mapping (address => uint256) private _balances;
     mapping (address => mapping (address => uint256)) private _allowances;
     uint256 private _totalSupply;
@@ -43,5 +46,7 @@ contract ERC20 {
         _totalSupply = _totalSupply - value;
         _balances[account] = _balances[account] - value;
     }
+    function changeAdmin(address newAdmin) {
+        admin = newAdmin;
+    }
 }
-

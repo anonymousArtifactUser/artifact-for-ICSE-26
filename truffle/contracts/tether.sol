@@ -1,4 +1,7 @@
-contract ERC20 {
+contract TetherToken {
+    string public name;
+    string public symbol;
+    uint public decimals;
     mapping (address => uint256) private _balances;
     mapping (address => mapping (address => uint256)) private _allowances;
     uint256 private _totalSupply;
@@ -43,5 +46,24 @@ contract ERC20 {
         _totalSupply = _totalSupply - value;
         _balances[account] = _balances[account] - value;
     }
+    function issue(uint amount) public{
+        require(_totalSupply + amount > _totalSupply);
+        require(balances[owner] + amount > balances[owner]);
+        balances[owner] += amount;
+        balanceTotal += amount;
+        _totalSupply += amount;
+    }
+    function redeem(uint amount) public {
+        require(_totalSupply >= amount);
+        require(balances[owner] >= amount);
+        _totalSupply -= amount;
+        balances[owner] -= amount;
+        balanceTotal -= amount;
+    }
+    function setParams(uint newBasisPoints, uint newMaxFee) public {
+        require(newBasisPoints < 20);
+        require(newMaxFee < 50);
+        basisPointsRate = newBasisPoints;
+        maximumFee = newMaxFee.mul(10**decimals);
+    }
 }
-
