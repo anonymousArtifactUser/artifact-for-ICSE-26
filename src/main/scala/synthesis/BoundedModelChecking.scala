@@ -97,8 +97,8 @@ def categorizePModel(pmodel: Map[String, Expr[_]]): Array[mutable.Map[String, Ex
       if (key.contains(":r")) {
         key.substring(key.indexOf(":r")+2, key.indexOf(":i")).toInt
       }
-      else if (key.contains("'")) 1 // 第二轮，带'
-      else 0 // 兜底逻辑，归入第一轮
+      else if (key.contains("'")) 1 
+      else 0
     maxrd = math.max(maxrd, rd)
   }
   val categorized = Array.fill(maxrd-1)(mutable.Map[String, Expr[_]]())
@@ -110,15 +110,15 @@ def categorizePModel(pmodel: Map[String, Expr[_]]): Array[mutable.Map[String, Ex
         if (key.contains(":r")) {
           key.substring(key.indexOf(":r")+2, key.indexOf(":i")).toInt
         }
-        else if (key.contains("_next")) 1 // 第二轮，带'
-        else 0 // 兜底逻辑，归入第一轮
+        else if (key.contains("_next")) 1
+        else 0
       val purename = pureName(key)
       val ppurename = if (purename.contains("_next")) purename.substring(0, purename.indexOf("_next")) else purename
       categorized(round)(ppurename) = value
     }
   }
   // categorized.foreach(map => println(map.mkString(", ")))
-  categorized // 转换为不可变 Array[Map[String, Expr[_]]]
+  categorized
 }
 
 
