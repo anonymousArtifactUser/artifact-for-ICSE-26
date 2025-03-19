@@ -292,11 +292,15 @@ object Main extends App {
   
   else if (args(0) == "synthesize") {
     val name = args(1)
+    print("synthesizing ")
     Synthesizer.synthesize(name)
   }
 
   else if (args(0) == "synthesis") {
-    allsynthesisBenchmarks.foreach{name => Synthesizer.synthesize(name)}
+    allsynthesisBenchmarks.foreach{name => 
+      print("synthesizing ")
+      Synthesizer.synthesize(name)
+    }
   }
 
   else {
