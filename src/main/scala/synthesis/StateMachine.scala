@@ -353,9 +353,6 @@ class StateMachine(name: String, ctx: Context) {
 
     solidityCode.append(
       s"""
-      |// SPDX-License-Identifier: MIT
-      |pragma solidity ^0.8.0;
-      |
       |contract ${name.capitalize} {
       |
       """.stripMargin
@@ -411,6 +408,6 @@ class StateMachine(name: String, ctx: Context) {
     }
   }
 
-
+}
 
 }
