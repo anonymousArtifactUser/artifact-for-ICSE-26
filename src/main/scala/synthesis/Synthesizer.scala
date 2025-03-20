@@ -25,7 +25,7 @@ case class Synthesizer() {
     statemachine.addOnce()
     statemachine.generate_candidate_guards()
     stateMachine.cegis(property, postrace)
-    stateMachine.inductive_prove()
+    stateMachine.inductive_prove(property)
     val endTime = System.nanoTime()
     val elapsedTimeMs = (endTime - startTime) / 1e9
     print(s" $elapsedTimeMs")
