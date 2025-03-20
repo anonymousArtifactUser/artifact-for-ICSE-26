@@ -318,7 +318,45 @@ class StateMachine(name: String, ctx: Context) {
 
     println(s" $syn_time $bmc_time")
   }
+  def inductive_prove(properties: List[Expr[BoolSort]]): Unit = {
+    /** Variable keeps track of the current transaction name. */
+    val (transactionThis, transactionNext) = tr.newVar("transaction", ctx.mkStringSort())
 
+    /** Generate initial constraints. */
+    var initConditions: List[BoolExpr] = List()
+    for (rel <- materializedRelations) {
+      val sort = getSort(ctx, rel, getIndices(rel))
+      val (v_in, _) = tr.newVar(rel.name, sort)
+      val (_init, _,_) = getInitConstraints(ctx, rel, v_in, indices, initializationRules.find(_.head.relation==rel))
+      initConditions :+= _init
+    }
+    tr.setInit(ctx.mkAnd(initConditions.toArray:_*))
+
+    val (fullTransitionCondition, transactionConditions) = getTransitionConstraints(transactionThis, transactionNext)
+    tr.setTr(fullTransitionCondition, transactionConditions)
+
+    for (property <- properties) {
+
+      val isTransactionProperty = vr.body.exists(_.relation.name=="transaction")
+
+      val (resInit, _resTr) = inductiveProve(ctx, tr, property, isTransactionProperty)
+      val resTr = _resTr match {
+        case Status.UNSATISFIABLE => _resTr
+        case Status.UNKNOWN | Status.SATISFIABLE => {
+          invariantGenerator.findInvariant(tr, vr) match {
+            case Some(inv) => {
+              // validateInvariant(inv, tr, property)
+              val (_invInit, _invTr) = inductiveProve(ctx,tr,ctx.mkAnd(property,inv), isTransactionProperty)
+              println(s"invariant: ${inv}")
+              _invTr
+            }
+            case None => _resTr
+          }
+        }
+      }
+      println(s"Init: $resInit")
+      println(s"Tr: $resTr")
+  }
 
   def readFromProgram(p: Program): List[List[List[Expr[BoolSort]]]] = {
     val program = addBuiltInRules(p)
